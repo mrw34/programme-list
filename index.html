@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.no-icons.min.css" rel="stylesheet">
+	<link href="//netdna.bootstrapcdn.com/font-awesome/3.1.1/css/font-awesome.css" rel="stylesheet">
+	<link href="http://markwoodbridge.com" title="Mark Woodbridge" rel="author"/>
+	<title>Programmes</title>
+</head>
+<body class="container">
+	<h3>Programmes</h3>
+	<p>This site turns a list of BBC programmes into a calendar that can be subscribed to using <a href="http://support.google.com/calendar/bin/answer.py?hl=en&amp;answer=37100">Google Calendar</a>, <a href="http://www.apple.com/findouthow/mac/#subscribeical">Apple Calendar</a>, and <a href="http://en.wikipedia.org/wiki/List_of_applications_with_iCalendar_support">many other applications</a>.</p>
+	<p>If your list contains radio programmes then an OPML file is generated for the relevant podcasts. It can be used with <a href="https://support.google.com/reader/answer/69982?hl=en">Google Reader</a> or <a href="http://lifehacker.com/5990881/five-best-google-reader-alternatives">other news readers</a> and <a href="http://en.wikipedia.org/wiki/List_of_podcatchers">podcast clients</a>.</p>
+	<p style="display: none" class="ics"><i class="icon-calendar"></i> <a href="#">Programmes calendar</a> (Right-click to copy link. You only need to subscribe once.)</p>
+	<p style="display: none" class="opml"><i class="icon-rss"></i> <a href="#">Podcast list</a> (For radio programmes only. Can be imported into your RSS reader.)</p>
+	<form class="form-search" style="margin-top: 1.5em">
+		<input type="text" class="search-query" placeholder="Programme name">
+		<button type="submit" class="btn">Search</button>
+		<span class="help-inline" style="color: #b94a48; display: none;">Not found</span>
+	</form>
+	<ul style="list-style-type: none; margin-left: 0; display: inline-block;">
+		<li><img src="static/loading.gif" alt="loading">
+	</ul>
+	<script src="//code.jquery.com/jquery-1.10.1.min.js"></script>
+	<script>
+	(function() {
+		'use strict';
+		$('input').keypress(function(event) {
+			if (event.which !== 13) {
+				$('span').hide();
+			}
+		});
+		$('ul').on('click', 'a[href="#"]', function() {
+			$(this).parent().remove();
+			$('ul').trigger('changed');
+			return false;
+		});
+		$('ul').on('changed', function() {
+			$.post('proglist', JSON.stringify(serialize())).done(function(data) {
+				$('div').css('visibility', 'visible').find('a').attr('href', 'proglist.ics?u=' + data);
+			});
+		});
+		$('form').submit(function() {
+			$.getJSON('https://www.googleapis.com/customsearch/v1', {
+					key: 'AIzaSyBqh6dE7-tmEm_4ViDeYRgxyus9G2hQKsU',
+					cx: '007456302687249466036:8nu6oeeiukg',
+					alt: 'json',
+					q: $('input').val()
+			}).done(function(data) {
+				if (data.items) {
+					var items = $.grep(data.items, function(e) {
+						return !e.pagemap.Episode;
+					});
+					if (items) {
+						$('input').val('');
+						var title = items[0].title;
+						var pid = items[0].link.split('/').splice(-1);
+						if (!serialize()[pid]) {
+							$('ul').append(li(pid, title)).trigger('changed');
+						}
+						return;
+					}
+				}
+				$('span').show();
+			});
+			return false;
+		});
+		var serialize = function() {
+			var programmes = {};
+			$('li').each(function() {
+				var title = $(this).children()[1].text;
+				var pid = $(this).data('pid');
+				programmes[pid] = title;
+			});
+			return programmes;
+		};
+		var li = function(pid, title) {
+			return '<li data-pid="' + pid + '" style="display: table-row"><a href="#" style="display: table-cell; padding-right: 4px; text-decoration: none; color: black" ><i class="icon-remove-sign"></i></a> <a href="http://www.bbc.co.uk/programmes/' + pid + '" style="display: table-cell; padding-right: 16px">' + title + '</a> [<a href="http://www.bbc.co.uk/programmes/' + pid + '/episodes/player" style="display: table-cell">iPlayer</a>]';
+		};
+		$.get('proglist', function(data) {
+			$('ul').empty();
+			if (data && data.programmes) {
+				$.each(data.programmes, function(pid, title) {
+					$('ul').append(li(pid, title));
+				});
+				$('p.ics').show().find('a').attr('href', 'proglist.ics?u=' + data.u);
+				$('p.opml').show().find('a').attr('href', 'proglist.opml?u=' + data.u);
+			}
+			$('li').sort(function(a, b) {
+				return $(a).text().localeCompare($(b).text());
+			}).appendTo('ul');
+		});
+	})();
+	</script>
+</body>
