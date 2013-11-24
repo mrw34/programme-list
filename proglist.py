@@ -68,8 +68,12 @@ else:
 				if j is None:
 					#u = urllib.urlopen('http://www.bbc.co.uk/programmes/%s/episodes/upcoming.json' % programme)
 					u = urllib.urlopen('http://www.bbc.co.uk/programmes/%s/episodes/upcoming/debut.json' % programme)
-					j = json.load(u)
-					u.close()
+					try:
+						j = json.load(u)
+					except ValueError:
+						continue
+					finally:
+						u.close()
 					memcache.add(programme, j, 60 * 60 * random.randint(24, 48)) #cache for between 24 and 48 hours (inclusive)
 				for broadcast in j['broadcasts']:
 					if broadcast['start'] == broadcast['programme']['first_broadcast_date'] and broadcast['service']['title'] in programmes[programme]:
