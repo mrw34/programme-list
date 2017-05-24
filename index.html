@@ -49,7 +49,8 @@
 			}).done(function(data) {
 				if (data.items) {
 					var items = $.grep(data.items, function(e) {
-						return !e.pagemap.Episode;
+						// return !e.pagemap.Episode;
+						return e.title === $('input').val();
 					});
 					if (items) {
 						$('input').val('');
